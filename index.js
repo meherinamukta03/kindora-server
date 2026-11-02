@@ -27,6 +27,7 @@ export async function connectToMongoDB() {
 const collectionClient=await connectToMongoDB()
 const db=collectionClient.db("kindora")
 const UpcomminEventsCollection=db.collection("upcomingEvent")
+const UpcomminEventsJoinedCollection=db.collection("upcomingEventjoined")
 
 
 app.get('/', (req, res) => {
@@ -75,7 +76,36 @@ const id=req.params.id
 
 })
 
+app.post('/upcomingEvent/joined',async(req,res)=>{
 
+const joinedData=req.body
+  const result = await UpcomminEventsJoinedCollection.insertOne(joinedData);
+
+res.send(result)
+})
+
+app.get('/manage-events/:email',async(req,res)=>{
+
+  const email=req.params.email
+  const result= await UpcomminEventsCollection.find({userEmail:email}).toArray()
+
+res.send(result)
+
+})
+
+app.get("/recentupcomingEvent", async (req, res) => {
+  try {
+    const today = new Date().toISOString().split("T")[0];
+
+    const events = await UpcomminEventsCollection.find({ date: { $gte: today } }).sort({ date: 1 })
+      .limit(6)
+      .toArray();
+console.log("Events found:", events.length);
+    res.send(events);
+  } catch (error) {
+    res.status(500).send({ message: "Failed to fetch events" });
+  }
+});
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
