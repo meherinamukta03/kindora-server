@@ -1,6 +1,6 @@
 import express from 'express'
 import cors from 'cors'
-import { MongoClient } from 'mongodb';
+import { MongoClient,ObjectId } from 'mongodb';
 import 'dotenv/config'
 
 
@@ -38,7 +38,7 @@ app.get('/', (req, res) => {
 
 app.get('/upcomingEvent',async (req, res) => {
 
-const result=await UpcomminEventsCollection.find().toArray()
+const result=await UpcomminEventsCollection.find().sort({ date: 1 }).toArray()
 
   res.send(result);
 });
@@ -46,14 +46,34 @@ const result=await UpcomminEventsCollection.find().toArray()
 
 //post for create event
 app.post('/upcomingEvent',async (req, res) => {
+try {
+    const eventData = req.body;
 
-  const eventData= req.body
+    console.log("Backend Received Data:", eventData);
 
-const result =await UpcomminEventsCollection.insertOne(eventData)
-res.sendStatus(result)
+    const result = await UpcomminEventsCollection.insertOne(eventData);
+
+    console.log("Inserted ID:", result.insertedId);
+
+    res.send(result);
+  } catch (error) {
+    console.log(error);
+    res.status(500).send(error.message);
+  }
 })
 
+app.get('/upcomingEvent/:id',async(req,res)=>{
 
+const id=req.params.id
+
+  const result = await UpcomminEventsCollection.findOne({
+    _id: new ObjectId(id),
+  });
+
+  res.send(result);
+
+
+})
 
 
 app.listen(PORT, () => {
