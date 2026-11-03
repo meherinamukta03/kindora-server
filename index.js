@@ -2,6 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import { MongoClient,ObjectId } from 'mongodb';
 import 'dotenv/config'
+import { createRemoteJWKSet, jwtVerify } from 'jose';
 
 
 const app = express();
@@ -30,29 +31,39 @@ const UpcomminEventsCollection=db.collection("upcomingEvent")
 const UpcomminEventsJoinedCollection=db.collection("upcomingEventjoined")
 
 
-const verifyToken = (req, res, next) => {
+const verifyToken = async(req, res, next) => {
   const authHeader = req.headers.authorization
-
+console.log(authHeader)
    if (!authHeader) {
     return res.status(401).send({
        message: 'Unauthorized access'
-     });
-  // }
+     });}
 
-  // try {
-  //   const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-  //   req.user = decoded;
-  //   next();
-  // } catch (error) {
-  //   return res.status(401).send({
-  //     message: 'Invalid token'
-  //   });
-  // }
 
+
+const token =authHeader.split(" ")[1]
+
+
+console.log(token)
+
+if(!token){
+return res.status(401).send({
+       message: 'Unauthorized access'
+     })
+
+
+}
+
+
+const JWKS=createRemoteJWKSet(new URL('http://localhost:3000/api/auth/jwks'))
+const {payload}=await jwtVerify(token,JWKS)
+console.log(payload)
 
   next()
-};
+
+}
+
 
 
 
@@ -74,7 +85,7 @@ app.get('/', (req, res) => {
 
 //data get for all upcoming events
 
-app.get('/upcomingEvent',verifyToken,async (req, res) => {
+app.get('/upcomingEvent',async (req, res) => {
 
 const result=await UpcomminEventsCollection.find().sort({ date: 1 }).toArray()
 
@@ -199,4 +210,4 @@ app.delete("/upcomingEvent/:id", async (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
-})}
+})
