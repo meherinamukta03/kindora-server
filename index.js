@@ -30,6 +30,43 @@ const UpcomminEventsCollection=db.collection("upcomingEvent")
 const UpcomminEventsJoinedCollection=db.collection("upcomingEventjoined")
 
 
+const verifyToken = (req, res, next) => {
+  const authHeader = req.headers.authorization
+
+   if (!authHeader) {
+    return res.status(401).send({
+       message: 'Unauthorized access'
+     });
+  // }
+
+  // try {
+  //   const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+  //   req.user = decoded;
+  //   next();
+  // } catch (error) {
+  //   return res.status(401).send({
+  //     message: 'Invalid token'
+  //   });
+  // }
+
+
+  next()
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 app.get('/', (req, res) => {
   res.send({message:'Server is runnig' });
 });
@@ -37,7 +74,7 @@ app.get('/', (req, res) => {
 
 //data get for all upcoming events
 
-app.get('/upcomingEvent',async (req, res) => {
+app.get('/upcomingEvent',verifyToken,async (req, res) => {
 
 const result=await UpcomminEventsCollection.find().sort({ date: 1 }).toArray()
 
@@ -162,4 +199,4 @@ app.delete("/upcomingEvent/:id", async (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
-});
+})}
