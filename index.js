@@ -75,14 +75,45 @@ const id=req.params.id
 
 
 })
+app.post("/upcomingEvent/joined", async (req, res) => {
+  try {
+    const { userEmail, ...eventData } = req.body;
 
-app.post('/upcomingEvent/joined',async(req,res)=>{
+    const joinedData = {
+      ...eventData,
+      eventId: eventData.eventId || eventData._id,
+      userEmail,
+      joinedAt: new Date(),
+    };
 
-const joinedData=req.body
-  const result = await UpcomminEventsJoinedCollection.insertOne(joinedData);
+    delete joinedData._id;
 
-res.send(result)
-})
+    const result = await UpcomminEventsJoinedCollection.insertOne(joinedData);
+
+    res.send(result);
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({ message: "Failed to join event" });
+  }
+});
+
+app.get("/joined-events/:email", async (req, res) => {
+  try {
+    const email = req.params.email;
+
+    const result = await UpcomminEventsJoinedCollection
+      .find({ userEmail: email })
+      .sort({ joinedAt: -1 })
+      .toArray();
+
+    res.send(result);
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({
+      message: "Failed to fetch joined events",
+    });
+  }
+});
 
 app.get('/manage-events/:email',async(req,res)=>{
 
@@ -106,6 +137,29 @@ console.log("Events found:", events.length);
     res.status(500).send({ message: "Failed to fetch events" });
   }
 });
+
+
+
+app.patch("/upcomingEvent/:id", async (req, res) => {
+  const id = req.params.id;
+  const updatedData = req.body;
+  const result = await UpcomminEventsCollection.updateOne(
+    { _id: new ObjectId(id) }, 
+    { $set: updatedData }, 
+  );
+  res.send(result);
+});
+
+app.delete("/upcomingEvent/:id", async (req, res) => {
+  const id = req.params.id;
+  const result = await UpcomminEventsCollection.deleteOne({
+    _id: new ObjectId(id),
+  });
+  res.send(result);
+});
+
+
+
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
