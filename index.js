@@ -57,8 +57,17 @@ return res.status(401).send({
 
 
 const JWKS=createRemoteJWKSet(new URL('http://localhost:3000/api/auth/jwks'))
-const {payload}=await jwtVerify(token,JWKS)
-console.log(payload)
+
+// Invalid/expired/forge token hole jwtVerify throw kore — catch na dile server crash kore 500 dey
+try {
+  const {payload}=await jwtVerify(token,JWKS)
+  console.log(payload)
+} catch (error) {
+  console.log("JWT verification failed:", error?.message)
+  return res.status(401).send({
+    message: 'Unauthorized access — invalid or expired token'
+  })
+}
 
   next()
 
@@ -94,7 +103,7 @@ const result=await UpcomminEventsCollection.find().sort({ date: 1 }).toArray()
 
 
 //post for create event
-app.post('/upcomingEvent',async (req, res) => {
+app.post('/upcomingEvent',verifyToken,async (req, res) => {
 try {
     const eventData = req.body;
 
@@ -111,7 +120,7 @@ try {
   }
 })
 
-app.get('/upcomingEvent/:id',async(req,res)=>{
+app.get('/upcomingEvent/:id',verifyToken,async(req,res)=>{
 
 const id=req.params.id
 
@@ -123,13 +132,29 @@ const id=req.params.id
 
 
 })
-app.post("/upcomingEvent/joined", async (req, res) => {
+app.post("/upcomingEvent/joined",verifyToken, async (req, res) => {
   try {
     const { userEmail, ...eventData } = req.body;
 
+    // userEmail chhara join record save hobe na — ageki bug er cause chhilo
+    if (!userEmail) {
+      return res.status(400).send({ message: "userEmail is required. Please login first." });
+    }
+
+    const eventId = eventData.eventId || eventData._id;
+    if (!eventId) {
+      return res.status(400).send({ message: "eventId is required" });
+    }
+
+    // Same user same event e second time join korte parbe na
+    const existing = await UpcomminEventsJoinedCollection.findOne({ eventId, userEmail });
+    if (existing) {
+      return res.status(409).send({ message: "You have already joined this event" });
+    }
+
     const joinedData = {
       ...eventData,
-      eventId: eventData.eventId || eventData._id,
+      eventId,
       userEmail,
       joinedAt: new Date(),
     };
@@ -145,7 +170,29 @@ app.post("/upcomingEvent/joined", async (req, res) => {
   }
 });
 
-app.get("/joined-events/:email", async (req, res) => {
+// Leave Event — joined record delete
+app.delete("/upcomingEvent/joined",verifyToken, async (req, res) => {
+  try {
+    const { userEmail, eventId } = req.query;
+
+    if (!userEmail || !eventId) {
+      return res.status(400).send({ message: "userEmail and eventId are required" });
+    }
+
+    const result = await UpcomminEventsJoinedCollection.deleteOne({ userEmail, eventId });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).send({ message: "You have not joined this event" });
+    }
+
+    res.send(result);
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({ message: "Failed to leave event" });
+  }
+});
+
+app.get("/joined-events/:email",verifyToken, async (req, res) => {
   try {
     const email = req.params.email;
 
@@ -163,7 +210,7 @@ app.get("/joined-events/:email", async (req, res) => {
   }
 });
 
-app.get('/manage-events/:email',async(req,res)=>{
+app.get('/manage-events/:email',verifyToken,async(req,res)=>{
 
   const email=req.params.email
   const result= await UpcomminEventsCollection.find({userEmail:email}).toArray()
@@ -188,7 +235,7 @@ console.log("Events found:", events.length);
 
 
 
-app.patch("/upcomingEvent/:id", async (req, res) => {
+app.patch("/upcomingEvent/:id",verifyToken, async (req, res) => {
   const id = req.params.id;
   const updatedData = req.body;
   const result = await UpcomminEventsCollection.updateOne(
@@ -198,7 +245,7 @@ app.patch("/upcomingEvent/:id", async (req, res) => {
   res.send(result);
 });
 
-app.delete("/upcomingEvent/:id", async (req, res) => {
+app.delete("/upcomingEvent/:id", verifyToken,async (req, res) => {
   const id = req.params.id;
   const result = await UpcomminEventsCollection.deleteOne({
     _id: new ObjectId(id),
