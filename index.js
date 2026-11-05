@@ -255,38 +255,20 @@ app.delete("/upcomingEvent/:id", verifyToken,async (req, res) => {
 
 
 
-
-// Find events by city
-app.get("/upcomingEvent/:city", async (req, res) => {
+app.get("/events-by-city/:city", async (req, res) => {
   try {
     const city = req.params.city;
 
-    if (!city) {
-      return res.status(400).send({
-        message: "City is required",
-      });
-    }
-
-    const events = await UpcomminEventsCollection
-      .find({
-        location: {
-          $regex: `^${city}$`,
-          $options: "i",
-        },
-      })
-      .toArray();
+    const events = await UpcomminEventsCollection.find({
+     location: { $eq: city }
+    }).toArray();
 
     res.status(200).send(events);
   } catch (error) {
-    console.error("Location search error:", error);
-
-    res.status(500).send({
-      message: "Failed to find events",
-    });
+    console.error(error);
+    res.status(500).send({ message: "Failed to find events" });
   }
 });
-
-
 
 
 
