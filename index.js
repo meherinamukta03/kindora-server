@@ -257,7 +257,7 @@ app.delete("/upcomingEvent/:id", verifyToken,async (req, res) => {
 
 
 // Find events by city
-app.get("/events-by-location/:city", async (req, res) => {
+app.get("/upcomingEvent/:city", async (req, res) => {
   try {
     const city = req.params.city;
 
