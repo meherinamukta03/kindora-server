@@ -56,7 +56,7 @@ return res.status(401).send({
 }
 
 
-const JWKS=createRemoteJWKSet(new URL('http://localhost:3000/api/auth/jwks'))
+const JWKS=createRemoteJWKSet(new URL(`${process.env.CLIENT_URL}/api/auth/jwks`))
 
 // Invalid/expired/forge token hole jwtVerify throw kore — catch na dile server crash kore 500 dey
 try {
@@ -255,6 +255,52 @@ app.delete("/upcomingEvent/:id", verifyToken,async (req, res) => {
 
 
 
+
+// Find events by city
+app.get("/events-by-location/:city", async (req, res) => {
+  try {
+    const city = req.params.city;
+
+    if (!city) {
+      return res.status(400).send({
+        message: "City is required",
+      });
+    }
+
+    const events = await UpcomminEventsCollection
+      .find({
+        location: {
+          $regex: `^${city}$`,
+          $options: "i",
+        },
+      })
+      .toArray();
+
+    res.status(200).send(events);
+  } catch (error) {
+    console.error("Location search error:", error);
+
+    res.status(500).send({
+      message: "Failed to find events",
+    });
+  }
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 })
+
+export default app 
