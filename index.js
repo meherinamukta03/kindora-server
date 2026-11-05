@@ -254,23 +254,26 @@ app.delete("/upcomingEvent/:id", verifyToken,async (req, res) => {
 });
 
 
-
 app.get("/events-by-city/:city", async (req, res) => {
   try {
-    const city = req.params.city;
+    const city = req.params.city.trim();
 
     const events = await UpcomminEventsCollection.find({
-     location: { $eq: city }
+      location: {
+        $regex: city,
+        $options: "i",
+      },
     }).toArray();
 
     res.status(200).send(events);
   } catch (error) {
     console.error(error);
-    res.status(500).send({ message: "Failed to find events" });
+
+    res.status(500).send({
+      message: "Failed to find events",
+    });
   }
 });
-
-
 
 
 
